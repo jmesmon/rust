@@ -291,7 +291,7 @@ impl Target {
     ///
     /// The error string could come from any of the APIs called, including filesystem access and
     /// JSON decoding.
-    pub fn search(target: &str) -> Result<Target, String> {
+    pub fn search(sysroot: &Path, target: &str) -> Result<Target, String> {
         use std::os;
         use std::io::File;
         use std::path::Path;
@@ -366,8 +366,8 @@ impl Target {
 
         let target_path = os::getenv("RUST_TARGET_PATH").unwrap_or(String::new());
 
-        let paths = os::split_paths(target_path.as_slice());
-        // FIXME 16351: add a sane default search path?
+        let mut paths = os::split_paths(target_path.as_slice());
+        paths.push(sysroot.join_many(&[env!("CFG_LIBDIR_RELATIVE"), "rust", "targets"]));
 
         for dir in paths.iter() {
             let p =  dir.join(path.clone());

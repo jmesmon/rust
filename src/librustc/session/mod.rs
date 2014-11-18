@@ -239,7 +239,11 @@ pub fn build_session_(sopts: config::Options,
                       local_crate_source_file: Option<Path>,
                       span_diagnostic: diagnostic::SpanHandler)
                       -> Session {
-    let target_cfg = config::build_target_config(&sopts, &span_diagnostic);
+    let sysroot = match sopts.maybe_sysroot {
+        Some(ref x) => Path::new(x),
+        None => filesearch::get_or_default_sysroot()
+    };
+    let target_cfg = config::build_target_config(&sysroot, &sopts, &span_diagnostic);
     let p_s = parse::new_parse_sess_special_handler(span_diagnostic);
     let default_sysroot = match sopts.maybe_sysroot {
         Some(_) => None,

@@ -546,8 +546,8 @@ pub fn build_configuration(sess: &Session) -> ast::CrateConfig {
     v
 }
 
-pub fn build_target_config(opts: &Options, sp: &SpanHandler) -> Config {
-    let target = match Target::search(opts.target_triple.as_slice()) {
+pub fn build_target_config(sysroot: &Path, opts: &Options, sp: &SpanHandler) -> Config {
+    let target = match Target::search(sysroot, opts.target_triple.as_slice()) {
         Ok(t) => t,
         Err(e) => {
             sp.handler().fatal((format!("Error loading target specification: {}", e)).as_slice());
