@@ -49,6 +49,8 @@ use serialize::json::Json;
 use std::default::Default;
 use std::io::prelude::*;
 use syntax::{diagnostic, abi};
+use std::borrow::ToOwned;
+use std::path::Path;
 
 mod android_base;
 mod apple_base;
@@ -365,12 +367,13 @@ impl Target {
     ///
     /// The error string could come from any of the APIs called, including
     /// filesystem access and JSON decoding.
-    pub fn search(target: &str) -> Result<Target, String> {
+    pub fn search(sysroot: &Path, target: &str) -> Result<Target, String> {
         use std::env;
         use std::ffi::OsString;
         use std::fs::File;
         use std::path::{Path, PathBuf};
         use serialize::json;
+        use std::iter::IntoIterator;
 
         fn load_file(path: &Path) -> Result<Target, String> {
             let mut f = try!(File::open(path).map_err(|e| e.to_string()));
@@ -466,9 +469,14 @@ impl Target {
         let target_path = env::var_os("RUST_TARGET_PATH")
                               .unwrap_or(OsString::new());
 
-        // FIXME 16351: add a sane default search path?
+        let mut default_path = sysroot.to_owned();
+        default_path.push(env!("CFG_LIBDIR_RELATIVE"));
+        default_path.push("rustlib");
 
-        for dir in env::split_paths(&target_path) {
+        let paths = env::split_paths(&target_path)
+            .chain(Some(default_path).into_iter());
+
+        for dir in paths {
             let p =  dir.join(&path);
             if p.is_file() {
                 return load_file(&p);
