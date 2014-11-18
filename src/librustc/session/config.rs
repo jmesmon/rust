@@ -38,7 +38,7 @@ use getopts;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use llvm;
 
@@ -651,8 +651,8 @@ pub fn build_configuration(sess: &Session) -> ast::CrateConfig {
     v
 }
 
-pub fn build_target_config(opts: &Options, sp: &SpanHandler) -> Config {
-    let target = match Target::search(&opts.target_triple) {
+pub fn build_target_config(sysroot: &Path, opts: &Options, sp: &SpanHandler) -> Config {
+    let target = match Target::search(sysroot, &opts.target_triple[..]) {
         Ok(t) => t,
         Err(e) => {
             sp.handler().fatal(&format!("Error loading target specification: {}", e));
