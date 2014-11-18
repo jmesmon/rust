@@ -370,14 +370,18 @@ pub fn build_session_(sopts: config::Options,
                       local_crate_source_file: Option<PathBuf>,
                       span_diagnostic: diagnostic::SpanHandler)
                       -> Session {
-    let host = match Target::search(config::host_triple()) {
+    let sysroot = match sopts.maybe_sysroot {
+        Some(ref x) => PathBuf::from(x),
+        None => filesearch::get_or_default_sysroot()
+    };
+    let host = match Target::search(&sysroot, config::host_triple()) {
         Ok(t) => t,
         Err(e) => {
             span_diagnostic.handler()
                 .fatal(&format!("Error loading host specification: {}", e));
     }
     };
-    let target_cfg = config::build_target_config(&sopts, &span_diagnostic);
+    let target_cfg = config::build_target_config(&sysroot, &sopts, &span_diagnostic);
     let p_s = parse::new_parse_sess_special_handler(span_diagnostic);
     let default_sysroot = match sopts.maybe_sysroot {
         Some(_) => None,
