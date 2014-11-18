@@ -225,6 +225,10 @@ pub fn build_session_(sopts: config::Options,
         Some(_) => None,
         None => Some(filesearch::get_or_default_sysroot())
     };
+    warn!("BUILDING SESSION {} {} {} {} {}", env!("CFG_LIBDIR_RELATIVE"), env!("CFG_BINDIR_RELATIVE"),
+            default_sysroot.as_ref().map(|x| x.display()),
+            sopts.maybe_sysroot.as_ref().map(|x| x.display()),
+            filesearch::get_or_default_sysroot().display());
 
     // Make the path absolute, if necessary
     let local_crate_source_file = local_crate_source_file.map(|path|
