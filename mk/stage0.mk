@@ -12,7 +12,8 @@ endif
 $(SNAPSHOT_RUSTC_POST_CLEANUP): \
 		$(S)src/snapshots.txt \
 		$(S)src/etc/get-snapshot.py $(MKFILE_DEPS) \
-		| $(HBIN0_H_$(CFG_BUILD))/
+		| $(HBIN0_H_$(CFG_BUILD))/ $(HLIB0_H_$(CFG_BUILD)/ \
+		$(HROOT0_H_$(CFG_BUILD)/bin/ $(HROOT0_H_$(CFG_BUILD)/lib/
 
 	@$(call E, fetch: $@)
 #   Note: the variable "SNAPSHOT_FILE" is generally not set, and so
