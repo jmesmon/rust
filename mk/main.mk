@@ -370,20 +370,21 @@ define SREQ
 # Destinations of artifacts for the host compiler
 HROOT$(1)_H_$(3) = $(3)/stage$(1)
 HBIN$(1)_H_$(3) = $$(HROOT$(1)_H_$(3))/bin
-ifeq ($$(CFG_WINDOWSY_$(3)),1)
 HLIB$(1)_H_$(3) = $$(HROOT$(1)_H_$(3))/$$(CFG_LIBDIR_RELATIVE)
-else
-ifeq ($(1),0)
-HLIB$(1)_H_$(3) = $$(HROOT$(1)_H_$(3))/lib
-else
-HLIB$(1)_H_$(3) = $$(HROOT$(1)_H_$(3))/$$(CFG_LIBDIR_RELATIVE)
-endif
-endif
 
 # Destinations of artifacts for target architectures
 TROOT$(1)_T_$(2)_H_$(3) = $$(HLIB$(1)_H_$(3))/rustlib/$(2)
 TBIN$(1)_T_$(2)_H_$(3) = $$(TROOT$(1)_T_$(2)_H_$(3))/bin
 TLIB$(1)_T_$(2)_H_$(3) = $$(TROOT$(1)_T_$(2)_H_$(3))/lib
+
+# Don't trust stage0, be explicit about libraries
+# TODO: rather than specifying sysroot, we really want to tell which libdir to
+#       use (ie: the dir containing 'rustlib'). This would allow us to avoid
+#       passing the '-L' options.
+ifeq ($(1),0)
+RUSTFLAGS_S_$(1)_T_$(2)_H_$(3) += --sysroot "$$(HROOT$(1)_H_$(3))" \
+				  -L "$$(TLIB$(1)_T_$(2)_H_$(3))"
+endif
 
 # Preqrequisites for using the stageN compiler
 ifeq ($(1),0)
@@ -498,6 +499,7 @@ STAGE$(1)_T_$(2)_H_$(3) := \
 		$$(HBIN$(1)_H_$(3))/rustc$$(X_$(3)) \
 		--cfg $$(CFGFLAG$(1)_T_$(2)_H_$(3)) \
 		$$(CFG_RUSTC_FLAGS) $$(EXTRAFLAGS_STAGE$(1)) --target=$(2)) \
+		$$(RUSTFLAGS_S_$(1)_T_$(2)_H_$(3)) \
                 $$(RUSTC_FLAGS_$(2))
 
 PERF_STAGE$(1)_T_$(2)_H_$(3) := \
@@ -506,6 +508,7 @@ PERF_STAGE$(1)_T_$(2)_H_$(3) := \
 		$$(HBIN$(1)_H_$(3))/rustc$$(X_$(3)) \
 		--cfg $$(CFGFLAG$(1)_T_$(2)_H_$(3)) \
 		$$(CFG_RUSTC_FLAGS) $$(EXTRAFLAGS_STAGE$(1)) --target=$(2)) \
+		$$(RUSTFLAGS_S_$(1)_T_$(2)_H_$(3)) \
                 $$(RUSTC_FLAGS_$(2))
 
 endef
