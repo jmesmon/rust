@@ -9,11 +9,16 @@
 # option. This file may not be copied, modified, or distributed
 # except according to those terms.
 
-TARG_DIR=$1
-PREFIX=$2
-RUSTLIBDIR=$3
+# exit if any command not in an `if` or `while` fails
+# exit if we attempt to use an undefined variable
+set -eu
 
-LIB_DIR=lib
+TARG_DIR=$1
+RUSTC_BIN=$2
+LIBDIR=$3
+LOCAL_BINDIR_RELATIVE=$4
+LOCAL_LIBDIR_RELATIVE=$5
+
 LIB_PREFIX=lib
 
 OS=`uname -s`
@@ -37,13 +42,13 @@ case $OS in
     ;;
 esac
 
-if [ -z $PREFIX ]; then
+if [ -z $RUSTC_BIN ]; then
     echo "No local rust specified."
     exit 1
 fi
 
-if [ ! -e ${PREFIX}/bin/rustc${BIN_SUF} ]; then
-    echo "No local rust installed at ${PREFIX}"
+if ! [ -e ${RUSTC_BIN} ]; then
+    echo "No local rust installed at '${RUSTC_BIN}'"
     exit 1
 fi
 
@@ -52,12 +57,13 @@ if [ -z $TARG_DIR ]; then
     exit 1
 fi
 
-cp ${PREFIX}/bin/rustc${BIN_SUF} ${TARG_DIR}/stage0/bin/
-cp ${PREFIX}/${LIB_DIR}/${RUSTLIBDIR}/${TARG_DIR}/${LIB_DIR}/* ${TARG_DIR}/stage0/${LIB_DIR}/
-cp ${PREFIX}/${LIB_DIR}/${LIB_PREFIX}extra*${LIB_SUF} ${TARG_DIR}/stage0/${LIB_DIR}/
-cp ${PREFIX}/${LIB_DIR}/${LIB_PREFIX}rust*${LIB_SUF} ${TARG_DIR}/stage0/${LIB_DIR}/
-cp ${PREFIX}/${LIB_DIR}/${LIB_PREFIX}std*${LIB_SUF} ${TARG_DIR}/stage0/${LIB_DIR}/
-cp ${PREFIX}/${LIB_DIR}/${LIB_PREFIX}syntax*${LIB_SUF} ${TARG_DIR}/stage0/${LIB_DIR}/
+cp ${RUSTC_BIN} ${TARG_DIR}/stage0/${LOCAL_BINDIR_RELATIVE}
 
-# do not fail if one of the above fails, as all we need is a working rustc!
-exit 0
+# do not fail if one of the below fails, as all we need is a working rustc!
+# FIXME: then why bother copying all of this?
+cp ${LIBDIR}/rustlib/${TARG_DIR}/lib/*      ${TARG_DIR}/stage0/${LOCAL_LIBDIR_RELATIVE}/ || true
+cp ${LIBDIR}/${LIB_PREFIX}extra*${LIB_SUF}  ${TARG_DIR}/stage0/${LOCAL_LIBDIR_RELATIVE}/ || true
+cp ${LIBDIR}/${LIB_PREFIX}rust*${LIB_SUF}   ${TARG_DIR}/stage0/${LOCAL_LIBDIR_RELATIVE}/ || true
+cp ${LIBDIR}/${LIB_PREFIX}std*${LIB_SUF}    ${TARG_DIR}/stage0/${LOCAL_LIBDIR_RELATIVE}/ || true
+cp ${LIBDIR}/${LIB_PREFIX}syntax*${LIB_SUF} ${TARG_DIR}/stage0/${LOCAL_LIBDIR_RELATIVE}/ || true
+

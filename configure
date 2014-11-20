@@ -547,16 +547,16 @@ CFG_TARGET=$(to_llvm_triple $CFG_TARGET)
 # there's no rpath. This is where the build system itself puts libraries;
 # --libdir is used to configure the installation directory.
 # FIXME: This needs to parameterized over target triples. Do it in platform.mk
-CFG_LIBDIR_RELATIVE=lib
+CFG_DEFAULT_LIBDIR_RELATIVE=lib
 if [ "$CFG_OSTYPE" = "pc-windows-gnu" ]
 then
-    CFG_LIBDIR_RELATIVE=bin
+    CFG_DEFAULT_LIBDIR_RELATIVE=bin
 fi
 
-valopt libdir "${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}" "install libraries"
+valopt libdir "${CFG_PREFIX}/${CFG_DEFAULT_LIBDIR_RELATIVE}" "install libraries"
 
-CFG_BINDIR_RELATIVE=bin
-valopt bindir "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}" "install binaries"
+CFG_DEFAULT_BINDIR_RELATIVE=bin
+valopt bindir "${CFG_PREFIX}/${CFG_DEFAULT_BINDIR_RELATIVE}" "install binaries"
 
 if [ $HELP -eq 1 ]
 then
@@ -689,28 +689,54 @@ fi
 
 if [ ! -z "$CFG_ENABLE_LOCAL_RUST" ]
 then
-    system_rustc=$(which rustc)
-    c="${CFG_LOCAL_RUST_ROOT}/bin/rustc${BIN_SUF}"
-    if [ -x "$c" ] && [ -f "$c" ]; then
-        CFG_LOCAL_RUST_ROOT="$c"
-    elif [ -x "${CFG_LOCAL_RUST_ROOT}" ] && [ -f "${CFG_LOCAL_RUST_ROOT}" ]; then
-        # everything is already configured
-        :
-    elif [ -n "$system_rustc" ]; then
-        CFG_LOCAL_RUST_ROOT=${system_rustc}
-    else
-        err "no local rust to use"
+    if [ -z "${CFG_LOCAL_RUSTC_BIN}" ]; then
+        # We don't know where the local rustc is, so attempt to guess based on
+        # the info avaliable to us.
+        # Prioritize DEFAULT_BINDIR_RELATIVE over BINDIR_RELATIVE to get the
+        # "more standard" install prior to a custom one (person using the
+        # custom one can easily override by providing their local bindir on the
+        # cmdline).
+        c="${CFG_LOCAL_RUST_BINDIR}/rustc${BIN_SUF}"
+        d="${CFG_LOCAL_RUST_ROOT}/${CFG_DEFAULT_BINDIR_RELATIVE}/rustc${BIN_SUF}"
+        e="${CFG_LOCAL_RUST_ROOT}/${CFG_BINDIR_RELATIVE}/rustc${BIN_SUF}"
+        if [ -n "${CFG_LOCAL_RUST_BINDIR}" ] && [ -f "$c" ] && [ -x "$c" ]; then
+            CFG_LOCAL_RUSTC_BIN="$c"
+        elif [ -n "${CFG_LOCAL_RUST_ROOT}" ] && [ -f "$d" ] && [ -x "$d" ]; then
+            CFG_LOCAL_RUSTC_BIN="$d"
+        elif [ -n "${CFG_LOCAL_RUST_ROOT}" ] && [ -f "$e" ] && [ -x "$e" ]; then
+            CFG_LOCAL_RUSTC_BIN="$e"
+        elif [ -z "${CFG_LOCAL_RUST_ROOT}" ]; then
+            CFG_LOCAL_RUSTC_BIN="$(which rustc)"
+        fi
     fi
 
-    CMD="${CFG_LOCAL_RUST_ROOT}"
+    if ! [ -f "${CFG_LOCAL_RUSTC_BIN}" ]; then
+        step_msg "Local rustc '${CFG_LOCAL_RUSTC_BIN}' is not a file"
+        exit 1
+    fi
+    if ! [ -x "${CFG_LOCAL_RUSTC_BIN}" ] ; then
+        step_msg "Local rustc '${CFG_LOCAL_RUSTC_BIN}' is not a executable"
+        exit 1
+    fi
+
+    CMD="${CFG_LOCAL_RUSTC_BIN}"
     LRV=`$CMD --version`
     if [ $? -ne 0 ]
     then
         step_msg "failure while running $CMD --version"
         exit 1
     fi
-    step_msg "using rustc at: ${CFG_LOCAL_RUST_ROOT} with version: $LRV"
-    putvar CFG_LOCAL_RUST_ROOT
+    step_msg "using rustc at: '$CMD' with version: $LRV"
+
+    if [ -z "${CFG_LOCAL_RUST_LIBDIR}" ]; then
+
+
+    fi
+
+    putvar CFG_LOCAL_RUSTC_BIN
+    putvar CFG_LOCAL_RUST_LIBDIR
+    putvar CFG_LOCAL_RUST_BINDIR_RELATIVE
+    putvar CFG_LOCAL_RUST_LIBDIR_RELATIVE
 fi
 
 # Force freebsd to build with clang; gcc doesn't like us there

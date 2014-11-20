@@ -18,7 +18,7 @@ $(SNAPSHOT_RUSTC_POST_CLEANUP): \
 #   Note: the variable "SNAPSHOT_FILE" is generally not set, and so
 #   we generally only pass one argument to this script.
 ifdef CFG_ENABLE_LOCAL_RUST
-	$(Q)$(S)src/etc/local_stage0.sh $(CFG_BUILD) $(CFG_LOCAL_RUST_ROOT) rustlib
+	$(Q)$(S)src/etc/local_stage0.sh $(CFG_BUILD) "$(CFG_LOCAL_RUST_EXE)" "$(CFG_LOCAL_RUST_LIBDIR)" "$(CFG_LOCAL_RUST_LIBDIR_RELATIVE)" "$(CFG_LOCAL_RUST_BINDIR_RELATIVE)"
 else
 	$(Q)$(CFG_PYTHON) $(S)src/etc/get-snapshot.py $(CFG_BUILD) $(SNAPSHOT_FILE)
 endif
