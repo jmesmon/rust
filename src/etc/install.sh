@@ -213,6 +213,7 @@ need_cmd grep
 need_cmd uname
 need_cmd tr
 need_cmd sed
+need_cmd realpath
 
 CFG_SRC_DIR="$(cd $(dirname $0) && pwd)"
 CFG_SELF="$0"
@@ -315,6 +316,11 @@ then
     exit 0
 fi
 
+# Determine libdir and bindir relative to prefix
+step_msg "calculating relative paths to prefix = ${CFG_PREFIX}"
+CFG_BINDIR_RELATIVE=$(realpath -m --relative-to="${CFG_PREFIX}" "${CFG_BINDIR}")
+CFG_LIBDIR_RELATIVE=$(realpath -m --relative-to="${CFG_PREFIX}" "${CFG_LIBDIR}")
+
 step_msg "validating $CFG_SELF args"
 validate_opt
 
@@ -328,8 +334,8 @@ then
     if [ -z "${CFG_UNINSTALL}" ]
     then
         msg "verifying platform can run binaries"
-        export $CFG_LD_PATH_VAR="${CFG_SRC_DIR}/lib:$CFG_OLD_LD_PATH_VAR"
-        "${CFG_SRC_DIR}/bin/rustc" --version > /dev/null
+        export $CFG_LD_PATH_VAR="${CFG_SRC_DIR}/${CFG_LIBDIR_RELATIVE}:$CFG_OLD_LD_PATH_VAR"
+        "${CFG_SRC_DIR}/${CFG_BINDIR_RELATIVE}/rustc" --version > /dev/null
         if [ $? -ne 0 ]
         then
             err "can't execute rustc binary on this platform"
@@ -432,16 +438,16 @@ while read p; do
     # Decide the destination of the file
     FILE_INSTALL_PATH="${CFG_PREFIX}/$p"
 
-    if echo "$p" | grep "^lib/" > /dev/null
+    if echo "$p" | grep "^${CFG_LIBDIR_RELATIVE}/" > /dev/null
     then
-        pp=`echo $p | sed 's/^lib\///'`
+        pp=`echo $p | sed 's;^'${CFG_LIBDIR_RELATIVE}'/;;'`
         FILE_INSTALL_PATH="${CFG_LIBDIR}/$pp"
     fi
 
-    if echo "$p" | grep "^bin/" > /dev/null
+    if echo "$p" | grep "^${CFG_BINDIR_RELATIVE}/" > /dev/null
     then
         is_bin=true
-        pp=`echo $p | sed 's/^bin\///'`
+        pp=`echo $p | sed 's;^'${CFG_BINDIR_RELATIVE}'/;;'`
         FILE_INSTALL_PATH="${CFG_BINDIR}/$pp"
     fi
 
@@ -497,11 +503,11 @@ fi
 if [ -z "${CFG_DISABLE_VERIFY}" ]
 then
     msg "verifying installed binaries are executable"
-    "${CFG_PREFIX}/bin/rustc" --version 2> /dev/null 1> /dev/null
+    "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}/rustc" --version 2> /dev/null 1> /dev/null
     if [ $? -ne 0 ]
     then
-        export $CFG_LD_PATH_VAR="${CFG_PREFIX}/lib:$CFG_OLD_LD_PATH_VAR"
-        "${CFG_PREFIX}/bin/rustc" --version > /dev/null
+        export $CFG_LD_PATH_VAR="${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}:$CFG_OLD_LD_PATH_VAR"
+        "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}/rustc" --version > /dev/null
         if [ $? -ne 0 ]
         then
             ERR="can't execute installed rustc binary. "
@@ -511,7 +517,7 @@ then
             err "${ERR}"
         else
             echo
-            echo "    Note: please ensure '${CFG_PREFIX}/lib' is added to ${CFG_LD_PATH_VAR}"
+            echo "    Note: please ensure '${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}' is added to ${CFG_LD_PATH_VAR}"
         fi
     fi
 fi
