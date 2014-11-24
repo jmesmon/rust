@@ -334,6 +334,31 @@ enable_if_not_disabled() {
     fi
 }
 
+abspath () {
+	case "$1" in
+	/*) echo "$1" ;;
+	*)  echo "$PWD/$1" ;;
+	esac
+}
+
+relpath () {
+	local src=$(abspath "$1")
+	local dst=$(abspath "$2")
+	local common=$src
+	local result=
+
+	# Start by checking if the whole src is common, then strip off pack
+	# components until we find the common element.
+	while [ "${dst#"$common"}" = "$dst" ]; do
+		common=$(dirname "$common")
+		result="../$result"
+	done
+
+	local down="${dst#"$common"}"
+	result="${result}${down#/}"
+	echo "$result"
+}
+
 to_llvm_triple() {
     case $1 in
         i686-w64-mingw32) echo i686-pc-windows-gnu ;;
@@ -631,6 +656,8 @@ putvar CFG_BUILD # Yes, this creates a duplicate entry, but the last one wins.
 CFG_HOST=$(to_llvm_triple $CFG_HOST)
 CFG_TARGET=$(to_llvm_triple $CFG_TARGET)
 
+CFG_LIBDIR_RELATIVE=lib
+
 # On windows we just store the libraries in the bin directory because
 # there's no rpath. This is where the build system itself puts libraries;
 # --libdir is used to configure the installation directory.
@@ -638,24 +665,21 @@ CFG_TARGET=$(to_llvm_triple $CFG_TARGET)
 if [ "$CFG_OSTYPE" = "pc-windows-gnu" ] || [ "$CFG_OSTYPE" = "pc-windows-msvc" ]
 then
     CFG_LIBDIR_RELATIVE=bin
-else
-    CFG_LIBDIR_RELATIVE=lib
 fi
 
-valopt libdir "${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}" "install libraries (do not set it on windows platform)"
+valopt libdir "${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}" "install libraries"
 
-case "$CFG_LIBDIR" in
-    "$CFG_PREFIX"/*) CAT_INC=2;;
-    "$CFG_PREFIX"*)  CAT_INC=1;;
-    *)
-        err "libdir must begin with the prefix. Use --prefix to set it accordingly.";;
-esac
+CFG_BINDIR_RELATIVE=bin
+valopt bindir "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}" "install binaries"
 
-CFG_LIBDIR_RELATIVE=`echo ${CFG_LIBDIR} | cut -c$((${#CFG_PREFIX}+${CAT_INC}))-`
+# Determine libdir and bindir relative to prefix
+step_msg "calculating relative paths to prefix = ${CFG_PREFIX}"
+CFG_BINDIR_RELATIVE=$(relpath "${CFG_PREFIX}" "${CFG_BINDIR}")
+CFG_LIBDIR_RELATIVE=$(relpath "${CFG_PREFIX}" "${CFG_LIBDIR}")
 
 if ( [ "$CFG_OSTYPE" = "pc-windows-gnu" ] || [ "$CFG_OSTYPE" = "pc-windows-msvc" ] ) \
-	&& [ "$CFG_LIBDIR_RELATIVE" != "bin" ]; then
-    err "libdir on windows should be set to 'bin'"
+    && [ "$CFG_LIBDIR_RELATIVE" != "$CFG_BINDIR_RELATIVE" ]; then
+  err "Windows builds currently require that LIBDIR == BINDIR (we have libdir{$CFG_LIBDIR_RELATIVE} != bindir{$CFG_BINDIR_RELATIVE} )"
 fi
 
 if [ $HELP -eq 1 ]
@@ -1742,6 +1766,7 @@ putvar CFG_PREFIX
 putvar CFG_HOST
 putvar CFG_TARGET
 putvar CFG_LIBDIR_RELATIVE
+putvar CFG_BINDIR_RELATIVE
 putvar CFG_DISABLE_MANAGE_SUBMODULES
 putvar CFG_AARCH64_LINUX_ANDROID_NDK
 putvar CFG_ARM_LINUX_ANDROIDEABI_NDK
