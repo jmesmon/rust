@@ -17,9 +17,9 @@ endif
 install:
 ifeq (root user, $(USER) $(patsubst %,user,$(SUDO_USER)))
 # Build the dist as the original user
-	$(Q)sudo -u "$$SUDO_USER" $(MAKE) prepare_install
+	$(Q)$(P)sudo -u "$$SUDO_USER" $(MAKE) prepare_install
 else
-	$(Q)$(MAKE) prepare_install
+	$(Q)$(P)$(MAKE) prepare_install
 endif
 	$(Q)cd tmp/empty_dir && sh ../../tmp/dist/$(PKG_NAME)-$(CFG_BUILD)/install.sh --prefix="$(DESTDIR)$(CFG_PREFIX)" --libdir="$(DESTDIR)$(CFG_LIBDIR)" --mandir="$(DESTDIR)$(CFG_MANDIR)" --bindir="$(DESTDIR)$(CFG_BINDIR)" "$(MAYBE_DISABLE_VERIFY)"
 # Remove tmp files because it's a decent amount of disk space
@@ -30,9 +30,9 @@ prepare_install: dist-install-dir-$(CFG_BUILD) | tmp/empty_dir
 uninstall:
 ifeq (root user, $(USER) $(patsubst %,user,$(SUDO_USER)))
 # Build the dist as the original user
-	$(Q)sudo -u "$$SUDO_USER" $(MAKE) prepare_uninstall
+	$(Q)$(P)sudo -u "$$SUDO_USER" $(MAKE) prepare_uninstall
 else
-	$(Q)$(MAKE) prepare_uninstall
+	$(Q)$(P)$(MAKE) prepare_uninstall
 endif
 	$(Q)cd tmp/empty_dir && sh ../../tmp/dist/$(PKG_NAME)-$(CFG_BUILD)/install.sh --uninstall --prefix="$(DESTDIR)$(CFG_PREFIX)" --libdir="$(DESTDIR)$(CFG_LIBDIR)" --mandir="$(DESTDIR)$(CFG_MANDIR)" --bindir="$(DESTDIR)$(CFG_BINDIR)"
 # Remove tmp files because it's a decent amount of disk space

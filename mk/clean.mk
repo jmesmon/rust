@@ -121,7 +121,7 @@ $(foreach host, $(CFG_HOST), \
 define DEF_CLEAN_LLVM_HOST
 ifeq ($(CFG_LLVM_ROOT),)
 clean-llvm$(1):
-	$$(Q)$$(MAKE) -C $$(CFG_LLVM_BUILD_DIR_$(1)) clean
+	$$(Q)$$(P)$$(MAKE) -C $$(CFG_LLVM_BUILD_DIR_$(1)) clean
 else
 clean-llvm$(1): ;
 

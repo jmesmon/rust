@@ -182,7 +182,7 @@ $$(JEMALLOC_LOCAL_$(1)): $$(JEMALLOC_DEPS) $$(MKFILE_DEPS)
 		RANLIB="$$(AR_$(1)) s" \
 		CPPFLAGS="-I $(S)src/rt/" \
 		EXTRA_CFLAGS="-g1"
-	$$(Q)$$(MAKE) -C "$$(JEMALLOC_BUILD_DIR_$(1))" build_lib_static
+	$$(Q)$$(P)$$(MAKE) -C "$$(JEMALLOC_BUILD_DIR_$(1))" build_lib_static
 
 ifeq ($$(CFG_DISABLE_JEMALLOC),)
 RUSTFLAGS_alloc := --cfg jemalloc
@@ -224,7 +224,7 @@ COMPRT_BUILD_DIR_$(1) := $$(RT_OUTPUT_DIR_$(1))/compiler-rt
 
 $$(COMPRT_LIB_$(1)): $$(COMPRT_DEPS) $$(MKFILE_DEPS)
 	@$$(call E, make: compiler-rt)
-	$$(Q)$$(MAKE) -C "$(S)src/compiler-rt" \
+	$$(Q)$$(P)$$(MAKE) -C "$(S)src/compiler-rt" \
 		ProjSrcRoot="$(S)src/compiler-rt" \
 		ProjObjRoot="$$(abspath $$(COMPRT_BUILD_DIR_$(1)))" \
 		CC="$$(CC_$(1))" \
@@ -302,7 +302,7 @@ $$(BACKTRACE_BUILD_DIR_$(1))/Makefile: $$(BACKTRACE_DEPS) $$(MKFILE_DEPS)
 
 $$(BACKTRACE_LIB_$(1)): $$(BACKTRACE_BUILD_DIR_$(1))/Makefile $$(MKFILE_DEPS)
 	@$$(call E, make: libbacktrace)
-	$$(Q)$$(MAKE) -C $$(BACKTRACE_BUILD_DIR_$(1)) \
+	$$(Q)$$(P)$$(MAKE) -C $$(BACKTRACE_BUILD_DIR_$(1)) \
 		INCDIR=$(S)src/libbacktrace
 	$$(Q)cp $$(BACKTRACE_BUILD_DIR_$(1))/.libs/libbacktrace.a $$@
 

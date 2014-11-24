@@ -16,5 +16,7 @@ else
   E = echo $(1)
 endif
 
+P = +
+
 S := $(CFG_SRC_DIR)
 

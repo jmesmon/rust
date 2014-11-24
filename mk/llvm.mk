@@ -28,7 +28,7 @@ LLVM_STAMP_$(1) = $$(CFG_LLVM_BUILD_DIR_$(1))/llvm-auto-clean-stamp
 
 $$(LLVM_CONFIG_$(1)): $$(LLVM_DEPS) $$(LLVM_STAMP_$(1))
 	@$$(call E, make: llvm)
-	$$(Q)$$(MAKE) -C $$(CFG_LLVM_BUILD_DIR_$(1)) $$(CFG_LLVM_BUILD_ENV_$(1)) ONLY_TOOLS="$$(LLVM_TOOLS)"
+	$$(Q)$$(P)$$(MAKE) -C $$(CFG_LLVM_BUILD_DIR_$(1)) $$(CFG_LLVM_BUILD_ENV_$(1)) ONLY_TOOLS="$$(LLVM_TOOLS)"
 	$$(Q)touch $$(LLVM_CONFIG_$(1))
 endif
 
@@ -38,7 +38,7 @@ endif
 # the stamp in the source dir.
 $$(LLVM_STAMP_$(1)): $(S)src/rustllvm/llvm-auto-clean-trigger
 	@$$(call E, make: cleaning llvm)
-	$(Q)$(MAKE) clean-llvm$(1)
+	$$(Q)$$(P)$$(MAKE) clean-llvm$(1)
 	@$$(call E, make: done cleaning llvm)
 	touch $$@
 
