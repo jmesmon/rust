@@ -205,6 +205,32 @@ absolutify() {
     ABSOLUTIFIED="${FILE_PATH}"
 }
 
+abspath () {
+	case "$1" in
+	/*) echo "$1" ;;
+	*)  echo "$PWD/$1" ;;
+	esac
+}
+
+relpath () {
+	local src=$(abspath "$1")
+	local dst=$(abspath "$2")
+	local common=$src
+	local result=
+
+	# Start by checking if the whole src is common, then strip off pack
+	# components until we find the common element.
+	while [ "${dst#"$common"}" = "$dst" ]; do
+		common=$(dirname "$common")
+		result="../$result"
+	done
+
+	local down="${dst#"$common"}"
+	result="${result}${down#/}"
+	echo "$result"
+}
+
+
 msg "looking for install programs"
 need_cmd mkdir
 need_cmd printf
@@ -285,6 +311,8 @@ then
     CFG_LIBDIR_RELATIVE=bin
 fi
 
+CFG_BINDIR_RELATIVE=bin
+
 if [ "$CFG_OSTYPE" = "pc-mingw32" ] || [ "$CFG_OSTYPE" = "w64-mingw32" ]
 then
     CFG_LD_PATH_VAR=PATH
@@ -311,6 +339,7 @@ case "$CFG_LIBDIR" in
 esac
 CFG_LIBDIR_RELATIVE=`echo ${CFG_LIBDIR} | cut -c$((${#CFG_PREFIX}+${CAT_INC}))-`
 
+valopt bindir "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}" "install binaries"
 valopt mandir "${CFG_PREFIX}/share/man" "install man pages in PATH"
 
 if [ $HELP -eq 1 ]
@@ -318,6 +347,11 @@ then
     echo
     exit 0
 fi
+
+# Determine libdir and bindir relative to prefix
+step_msg "calculating relative paths to prefix = ${CFG_PREFIX}"
+CFG_BINDIR_RELATIVE=$(relpath "${CFG_PREFIX}" "${CFG_BINDIR}")
+CFG_LIBDIR_RELATIVE=$(relpath "${CFG_PREFIX}" "${CFG_LIBDIR}")
 
 step_msg "validating $CFG_SELF args"
 validate_opt
@@ -332,8 +366,8 @@ then
     if [ -z "${CFG_UNINSTALL}" ]
     then
         msg "verifying platform can run binaries"
-        export $CFG_LD_PATH_VAR="${CFG_SRC_DIR}/lib:$CFG_OLD_LD_PATH_VAR"
-        "${CFG_SRC_DIR}/bin/rustc" --version > /dev/null
+        export $CFG_LD_PATH_VAR="${CFG_SRC_DIR}/${CFG_LIBDIR_RELATIVE}:$CFG_OLD_LD_PATH_VAR"
+        "${CFG_SRC_DIR}/${CFG_BINDIR_RELATIVE}/rustc" --version > /dev/null
         if [ $? -ne 0 ]
         then
             err "can't execute rustc binary on this platform"
@@ -431,6 +465,7 @@ need_ok "failed to create installed manifest"
 
 # Now install, iterate through the new manifest and copy files
 while read p; do
+    is_bin=false
 
     # Decide the destination of the file
     FILE_INSTALL_PATH="${CFG_PREFIX}/$p"
@@ -439,6 +474,13 @@ while read p; do
     then
         pp=`echo $p | sed "s%^${CFG_LIBDIR_RELATIVE}/%%"`
         FILE_INSTALL_PATH="${CFG_LIBDIR}/$pp"
+    fi
+
+    if echo "$p" | grep "^${CFG_BINDIR_RELATIVE}/" > /dev/null
+    then
+        is_bin=true
+        pp=`echo $p | sed 's;^'${CFG_BINDIR_RELATIVE}'/;;'`
+        FILE_INSTALL_PATH="${CFG_BINDIR}/$pp"
     fi
 
     if echo "$p" | grep "^share/man/" > /dev/null
@@ -458,7 +500,7 @@ while read p; do
 
     # Install the file
     msg "${FILE_INSTALL_PATH}"
-    if echo "$p" | grep "^bin/" > /dev/null
+    if $is_bin
     then
         install -m755 "${CFG_SRC_DIR}/$p" "${FILE_INSTALL_PATH}"
     else
@@ -493,11 +535,11 @@ fi
 if [ -z "${CFG_DISABLE_VERIFY}" ]
 then
     msg "verifying installed binaries are executable"
-    "${CFG_PREFIX}/bin/rustc" --version 2> /dev/null 1> /dev/null
+    "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}/rustc" --version 2> /dev/null 1> /dev/null
     if [ $? -ne 0 ]
     then
-        export $CFG_LD_PATH_VAR="${CFG_PREFIX}/lib:$CFG_OLD_LD_PATH_VAR"
-        "${CFG_PREFIX}/bin/rustc" --version > /dev/null
+        export $CFG_LD_PATH_VAR="${CFG_PREFIX}/${CFG_LIBDIR_RELATIVE}:$CFG_OLD_LD_PATH_VAR"
+        "${CFG_PREFIX}/${CFG_BINDIR_RELATIVE}/rustc" --version > /dev/null
         if [ $? -ne 0 ]
         then
             ERR="can't execute installed rustc binary. "
