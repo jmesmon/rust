@@ -68,8 +68,7 @@ impl<'a> FileSearch<'a> {
         if !found {
             let rustpath = rust_path();
             for path in &rustpath {
-                let tlib_path = make_rustpkg_lib_path(
-                    self.sysroot, path, self.triple);
+                let tlib_path = make_rustpkg_lib_path(path, self.triple);
                 debug!("is {} in visited_dirs? {}", tlib_path.display(),
                         visited_dirs.contains(&tlib_path));
 
@@ -96,7 +95,7 @@ impl<'a> FileSearch<'a> {
         where F: FnMut(&Path, PathKind) -> FileMatch
     {
         self.for_each_lib_search_path(|lib_search_path, kind| {
-            debug!("searching {}", lib_search_path.display());
+            info!("searching {}", lib_search_path.display());
             match fs::read_dir(lib_search_path) {
                 Ok(files) => {
                     let files = files.filter_map(|p| p.ok().map(|s| s.path()))
@@ -157,7 +156,7 @@ impl<'a> FileSearch<'a> {
     // Returns a list of directories where target-specific tool binaries are located.
     pub fn get_tools_search_paths(&self) -> Vec<PathBuf> {
         let mut p = PathBuf::from(self.sysroot);
-        p.push(&find_libdir(self.sysroot));
+        p.push(libdir_str());
         p.push(&rustlibdir());
         p.push(&self.triple);
         p.push("bin");
@@ -165,8 +164,8 @@ impl<'a> FileSearch<'a> {
     }
 }
 
-pub fn relative_target_lib_path(sysroot: &Path, target_triple: &str) -> PathBuf {
-    let mut p = PathBuf::from(&find_libdir(sysroot));
+pub fn relative_target_lib_path(target_triple: &str) -> PathBuf {
+    let mut p = PathBuf::from(&libdir_str());
     assert!(p.is_relative());
     p.push(&rustlibdir());
     p.push(target_triple);
@@ -176,15 +175,26 @@ pub fn relative_target_lib_path(sysroot: &Path, target_triple: &str) -> PathBuf 
 
 fn make_target_lib_path(sysroot: &Path,
                         target_triple: &str) -> PathBuf {
-    sysroot.join(&relative_target_lib_path(sysroot, target_triple))
+    sysroot.join(&relative_target_lib_path(target_triple))
 }
 
-fn make_rustpkg_lib_path(sysroot: &Path,
-                         dir: &Path,
+fn make_rustpkg_lib_path(dir: &Path,
                          triple: &str) -> PathBuf {
-    let mut p = dir.join(&find_libdir(sysroot));
+    let mut p = dir.join(libdir_str());
     p.push(triple);
     p
+}
+
+pub fn bindir_relative_str() -> &'static str {
+    env!("CFG_BINDIR_RELATIVE")
+}
+
+pub fn bindir_relative_path() -> PathBuf {
+    PathBuf::from(bindir_relative_str())
+}
+
+pub fn libdir_str() -> &'static str {
+    env!("CFG_LIBDIR_RELATIVE")
 }
 
 pub fn get_or_default_sysroot() -> PathBuf {
@@ -202,7 +212,18 @@ pub fn get_or_default_sysroot() -> PathBuf {
     }
 
     match canonicalize(env::current_exe().ok()) {
-        Some(mut p) => { p.pop(); p.pop(); p }
+        Some(mut p) => {
+            // Remove the exe name
+            p.pop();
+            let mut rel = bindir_relative_path();
+
+            // Remove a number of elements equal to the number of elements in the bindir relative
+            // path
+            while rel.pop() {
+                p.pop();
+            }
+            p
+        }
         None => panic!("can't determine value for sysroot")
     }
 }
@@ -255,47 +276,6 @@ pub fn rust_path() -> Vec<PathBuf> {
         }
     }
     env_rust_path
-}
-
-// The name of the directory rustc expects libraries to be located.
-// On Unix should be "lib", on windows "bin"
-#[cfg(unix)]
-fn find_libdir(sysroot: &Path) -> String {
-    // FIXME: This is a quick hack to make the rustc binary able to locate
-    // Rust libraries in Linux environments where libraries might be installed
-    // to lib64/lib32. This would be more foolproof by basing the sysroot off
-    // of the directory where librustc is located, rather than where the rustc
-    // binary is.
-    //If --libdir is set during configuration to the value other than
-    // "lib" (i.e. non-default), this value is used (see issue #16552).
-
-    match option_env!("CFG_LIBDIR_RELATIVE") {
-        Some(libdir) if libdir != "lib" => return libdir.to_string(),
-        _ => if sysroot.join(&primary_libdir_name()).join(&rustlibdir()).exists() {
-            return primary_libdir_name();
-        } else {
-            return secondary_libdir_name();
-        }
-    }
-
-    #[cfg(target_pointer_width = "64")]
-    fn primary_libdir_name() -> String {
-        "lib64".to_string()
-    }
-
-    #[cfg(target_pointer_width = "32")]
-    fn primary_libdir_name() -> String {
-        "lib32".to_string()
-    }
-
-    fn secondary_libdir_name() -> String {
-        "lib".to_string()
-    }
-}
-
-#[cfg(windows)]
-fn find_libdir(_sysroot: &Path) -> String {
-    "bin".to_string()
 }
 
 // The name of rustc's own place to organize libraries.
