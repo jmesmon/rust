@@ -337,7 +337,7 @@ mod imp {
             #[linkage = "extern_weak"]
             static __cxa_thread_atexit_impl: *const ();
         }
-        if !__cxa_thread_atexit_impl.is_null() {
+        if !__cxa_thread_atexit_impl.is_null() && !__dso_handle.is_null() {
             type F = unsafe extern fn(dtor: unsafe extern fn(*mut u8),
                                       arg: *mut u8,
                                       dso_handle: *mut u8) -> libc::c_int;
