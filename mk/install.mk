@@ -13,8 +13,9 @@ RUN_INSALLER = cd tmp/empty_dir && \
 		--prefix="$(DESTDIR)$(CFG_PREFIX)" \
 		--libdir="$(DESTDIR)$(CFG_LIBDIR)" \
 		--mandir="$(DESTDIR)$(CFG_MANDIR)" \
-		"$(MAYBE_DISABLE_VERIFY)"
-		--disable-rewrite-paths
+		"$(MAYBE_DISABLE_VERIFY)" \
+		--disable-rewrite-paths \
+		--disable-ldconfig
 
 install:
 ifeq (root user, $(USER) $(patsubst %,user,$(SUDO_USER)))
