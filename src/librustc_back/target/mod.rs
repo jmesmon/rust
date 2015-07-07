@@ -110,6 +110,8 @@ pub struct TargetOptions {
     /// sysroot folder.
     pub pre_link_objects: Vec<String>,
     pub post_link_objects: Vec<String>,
+    /// Path to objcopy.  Defaults to "objcopy".
+    pub objcopy: String,
     /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults
     /// to "default".
     pub cpu: String,
@@ -198,6 +200,7 @@ impl Default for TargetOptions {
             ar: option_env!("CFG_DEFAULT_AR").unwrap_or("ar").to_string(),
             pre_link_args: Vec::new(),
             post_link_args: Vec::new(),
+            objcopy: "objcopy".to_string(),
             cpu: "generic".to_string(),
             features: "".to_string(),
             dynamic_linking: false,
@@ -314,6 +317,7 @@ impl Target {
         key!(cpu);
         key!(ar);
         key!(linker);
+        key!(objcopy);
         key!(relocation_model);
         key!(code_model);
         key!(dll_prefix);

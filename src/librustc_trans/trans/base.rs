@@ -2560,6 +2560,9 @@ pub fn write_metadata(cx: &SharedCrateContext, krate: &hir::Crate,
     };
     unsafe {
         llvm::LLVMSetInitializer(llglobal, llconst);
+        llvm::LLVMSetGlobalConstant(llglobal, llvm::True);
+        llvm::LLVMSetUnnamedAddr(llglobal, llvm::True);
+        llvm::SetLinkage(llglobal, llvm::Linkage::PrivateLinkage);
         let name = loader::meta_section_name(&cx.sess().target.target);
         let name = CString::new(name).unwrap();
         llvm::LLVMSetSection(llglobal, name.as_ptr())

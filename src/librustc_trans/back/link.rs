@@ -393,6 +393,13 @@ fn command_path(sess: &Session) -> OsString {
     env::join_paths(new_path).unwrap()
 }
 
+pub fn get_objcopy_prog(sess: &Session) -> String {
+    match sess.opts.cg.objcopy {
+        Some(ref objcopy) => return objcopy.to_string(),
+        None => sess.target.target.options.objcopy.clone(),
+    }
+}
+
 pub fn remove(sess: &Session, path: &Path) {
     match fs::remove_file(path) {
         Ok(..) => {}
@@ -919,6 +926,34 @@ fn link_natively(sess: &Session, dylib: bool,
     }
 }
 
+fn fix_meta_section_attributes(sess: &Session, meta_name: &PathBuf) {
+    // First, fix up the note section attributes.  We want the SHF_ALLOC and
+    // SHF_WRITE flags to be unset so the section will get placed near the
+    // end along with the debug info.  This allows the section to be
+    // stripped later without renumbering important sections that
+    // contain code and data.
+    let objcopy = get_objcopy_prog(sess);
+    let mut o_cmd = Command::new(&objcopy);
+    o_cmd.arg("--rename-section")
+         .arg(".note.rustc=.note.rustc,contents,noload,readonly")
+         .arg(&meta_name);
+    // Invoke objcopy
+    info!("{:?}", o_cmd);
+    match o_cmd.status() {
+        Ok(exitstatus) => {
+            if !exitstatus.success() {
+                sess.err(&format!("objcopy failed with exit code {:?}", exitstatus.code()));
+                sess.note(&format!("{:?}", &o_cmd));
+            }
+        },
+        Err(exitstatus) => {
+            sess.err(&format!("objcopy failed: {}", exitstatus));
+            sess.note(&format!("{:?}", &o_cmd));
+        }
+    }
+    sess.abort_if_errors();
+}
+
 fn link_args(cmd: &mut Linker,
              sess: &Session,
              dylib: bool,
@@ -951,6 +986,9 @@ fn link_args(cmd: &mut Linker,
     // executable. This metadata is in a separate object file from the main
     // object file, so we link that in here.
     if dylib {
+        let meta_name = outputs.with_extension("metadata.o");
+
+        fix_meta_section_attributes(sess, &meta_name);
         cmd.add_object(&outputs.with_extension("metadata.o"));
     }
 
