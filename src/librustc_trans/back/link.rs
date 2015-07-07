@@ -206,11 +206,6 @@ fn symbol_hash<'tcx>(tcx: &ty::ctxt<'tcx>,
     symbol_hasher.reset();
     symbol_hasher.input_str(&link_meta.crate_name);
     symbol_hasher.input_str("-");
-    symbol_hasher.input_str(link_meta.crate_hash.as_str());
-    for meta in tcx.sess.crate_metadata.borrow().iter() {
-        symbol_hasher.input_str(&meta[..]);
-    }
-    symbol_hasher.input_str("-");
     symbol_hasher.input_str(&encoder::encoded_ty(tcx, t));
     // Prefix with 'h' so that it never blends into adjacent digits
     let mut hash = String::from("h");
