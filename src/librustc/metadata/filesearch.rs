@@ -43,11 +43,21 @@ impl<'a> FileSearch<'a> {
         F: FnMut(&Path, PathKind) -> FileMatch,
     {
         let mut visited_dirs = HashSet::new();
-        let mut found = false;
+
+        // Simply finding a single result is insufficient, for example if we stop after only
+        // finding a static lib there may be complaints about only having static and not having
+        // dynamic libs. To avoid this, we run until we might detect a new lib of the same type.
+        // This isn't ideal: we're potentially avoiding things that we might need (depending on the
+        // path order), but doing better requires changing FileSearch's api (we need to have `f`
+        // stop complaining and just tell us it's done).
+        let mut found = HashSet::new();
 
         for (path, kind) in self.search_paths.iter(self.kind) {
+            if found.contains(&kind) {
+                continue;
+            }
             match f(path, kind) {
-                FileMatches => found = true,
+                FileMatches => { found.insert(kind); },
                 FileDoesntMatch => ()
             }
             visited_dirs.insert(path.to_path_buf());
@@ -58,14 +68,14 @@ impl<'a> FileSearch<'a> {
                                              self.triple);
         if !visited_dirs.contains(&tlib_path) {
             match f(&tlib_path, PathKind::All) {
-                FileMatches => found = true,
+                FileMatches => return,
                 FileDoesntMatch => ()
             }
         }
 
         visited_dirs.insert(tlib_path);
         // Try RUST_PATH
-        if !found {
+        if found.is_empty() {
             let rustpath = rust_path();
             for path in &rustpath {
                 let tlib_path = make_rustpkg_lib_path(path, self.triple);
