@@ -46,7 +46,7 @@ use std::str;
 use flate;
 use serialize::hex::ToHex;
 use syntax::ast;
-use syntax::codemap::Span;
+use syntax::codemap::{Span,BytePos,NO_EXPANSION};
 use syntax::parse::token::{self, InternedString};
 use syntax::attr::AttrMetaMethods;
 
@@ -185,9 +185,31 @@ pub fn find_crate_name(sess: Option<&Session>,
 
 pub fn build_link_meta(sess: &Session, krate: &hir::Crate,
                        name: &str) -> LinkMeta {
+    let crate_hash = if sess.opts.cg.crate_hash != "" {
+        let dummy_span = Span {
+            lo: BytePos(0),
+            hi: BytePos(0),
+            expn_id: NO_EXPANSION
+        };
+        let dummy_module = hir::Mod {
+            inner: dummy_span,
+            items: vec!()
+        };
+        let dummy_krate = hir::Crate {
+            module: dummy_module,
+            attrs: vec!(),
+            config: vec!(),
+            span: dummy_span,
+            exported_macros: vec!()
+        };
+
+        Svh::calculate(&vec!(sess.opts.cg.crate_hash.clone()), &dummy_krate)
+    } else {
+        Svh::calculate(&sess.opts.cg.metadata, krate)
+    };
     let r = LinkMeta {
         crate_name: name.to_owned(),
-        crate_hash: Svh::calculate(&sess.opts.cg.metadata, krate),
+        crate_hash: crate_hash,
     };
     info!("{:?}", r);
     return r;
