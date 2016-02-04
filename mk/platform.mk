@@ -112,7 +112,7 @@ $(foreach cvar,CC CXX CPP CFLAGS CXXFLAGS CPPFLAGS, \
 
 CFG_RLIB_GLOB=lib$(1)-*.rlib
 
-include $(wildcard $(CFG_SRC_DIR)mk/cfg/*.mk)
+include $(wildcard $(CFG_PLATFORM_CFG)/*.mk)
 
 define ADD_INSTALLED_OBJECTS
   INSTALLED_OBJECTS_$(1) += $$(call CFG_STATIC_LIB_NAME_$(1),compiler-rt)
